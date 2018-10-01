@@ -75,6 +75,9 @@
 #ifndef TM_H
 #define TM_H 1
 
+#include <immintrin.h>
+#include <xmmintrin.h>
+
 #ifdef HAVE_CONFIG_H
 # include "STAMP_config.h"
 #endif
@@ -293,7 +296,7 @@
 #  define TM_ARGDECL_ALONE              /* nothing */
 #  define TM_CALLABLE                   /* nothing */
 
-#  define TM_STARTUP(numThread)         CPUID_RTM_CHECK; THREAD_MUTEX_INIT(global_rtm_mutex);
+#  define TM_STARTUP(numThread)         /* CPUID_RTM_CHECK; */ spinlock_init(&global_rtm_mutex);
 #  define TM_SHUTDOWN()                 /* nothing */
 
 #  define TM_THREAD_ENTER()             /* nothing */
@@ -322,20 +325,17 @@
 
 #  else /* !OTM */
 
-#    define TM_BEGIN()                    { __label__ failure;  \
-                                            int tries = 4;      \
-                                            XFAIL(failure);     \
-                                            tries --;           \
-                                            if (tries <= 0)     \
-                                                pthread_mutex_lock(&global_rtm_mutex);  \
-                                            else XBEGIN(failure);
+#define TM_BEGIN() { __label__ failure;  \
+                     int tries = 4;    \
+                     XFAIL(failure);     \
+                     tries--;   \
+                     if(tries <= 0) { spinlock_acquire(&global_rtm_mutex); } \
+                     else { XBEGIN(failure); if(!spinlock_isfree(&global_rtm_mutex)) XABORT(0xff); }
                                             
 
-#    define TM_END()                      if (tries > 0)        \
-                                              XEND();           \
-                                          else                      \
-                                              pthread_mutex_unlock(&global_rtm_mutex);     \
-                                          };
+#define TM_END()     if(tries > 0) { XEND(); } \
+                     else { spinlock_release(&global_rtm_mutex); } \
+                   };
 
 
 

@@ -84,7 +84,7 @@ static void            (*global_funcPtr)(void*) = NULL;
 static void*             global_argPtr          = NULL;
 static volatile bool_t   global_doShutdown      = FALSE;
 
-THREAD_MUTEX_T global_rtm_mutex;
+spinlock_t global_rtm_mutex; // Fall back path
 
 /* =============================================================================
  * threadWait
