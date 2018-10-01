@@ -1,0 +1,7 @@
+
+*.asm
+*.rtm
+*.seq
+*.o
+!Makefile.rtm
+!Makefile.seq
