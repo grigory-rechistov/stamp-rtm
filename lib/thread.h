@@ -133,7 +133,23 @@ typedef struct thread_barrier {
     long numThread;
 } thread_barrier_t;
 
-extern THREAD_MUTEX_T global_rtm_mutex;
+typedef struct {
+  volatile unsigned long flag;
+  unsigned long padding[7]; 
+} __attribute__ ((aligned(64))) spinlock_t;
+
+inline void spinlock_init(volatile spinlock_t *lock) { lock->flag = 0; }
+inline void spinlock_acquire(volatile spinlock_t *lock) { 
+  while(lock->flag == 1UL || __sync_lock_test_and_set(&lock->flag, 1UL) == 1UL) _mm_pause(); 
+}
+inline void spinlock_release(volatile spinlock_t *lock) {
+  __sync_lock_release(&lock->flag);
+}
+inline int spinlock_isfree(volatile spinlock_t *lock) {
+  return lock->flag == 0;
+}
+
+extern spinlock_t global_rtm_mutex; // Fall back path
 
 /* =============================================================================
  * thread_startup
